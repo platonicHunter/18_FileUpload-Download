@@ -1,4 +1,5 @@
 const { ValidationError } = require("sequelize");
+const fileHelper = require("../util/file");
 const Product = require("../models/product");
 const { validationResult } = require("express-validator");
 const mongoose = require("mongoose");
@@ -32,7 +33,7 @@ exports.postAddProduct = (req, res, next) => {
       validationErrors: [],
     });
   }
-  const imageUrl =image.path;
+  const imageUrl = image.path;
   if (!errors.isEmpty()) {
     return res.status(422).render("admin/edit-product", {
       pageTitle: "Add Product",
@@ -137,7 +138,8 @@ exports.postEditProduct = (req, res, next) => {
       product.title = updatedTitle;
       product.price = updatedPrice;
       product.description = updatedDesc;
-      if(image){
+      if (image) {
+        fileHelper.deleteFile(product.imageUrl); //delete image on folder
         product.imageUrl = image.path;
       }
       return product.save();
@@ -188,7 +190,16 @@ exports.getProducts = (req, res, next) => {
 
 exports.postDeleteProduct = (req, res, next) => {
   const prodId = req.body.productId;
-  Product.deleteOne({ _id: prodId, userId: req.user._id })
+  Product.findById(prodId)
+    .then((product) => {
+      if (!product) {
+        throw new Error("Product not found");
+      }
+      fileHelper.deleteFile(product.imageUrl); //delete image on folder
+      return Product.deleteOne({ _id: prodId, userId: req.user._id });
+    })
+    .catch((err) => next(err))
+
     .then(() => {
       console.log("DESTROYED PRODUCT");
       res.redirect("/admin/products");
