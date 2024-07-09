@@ -57,6 +57,7 @@ app.use(
   multer({ storage: fileStorage, fileFilter: fileFilter }).single("image")
 );
 app.use(express.static(path.join(__dirname, "public")));
+app.use('/images',express.static(path.join(__dirname, "images")));
 app.use(
   session({
     secret: "my secret",
@@ -110,6 +111,15 @@ app.use((err, req, res, next) => {
     isAuthenticated: req.session.isLoggedIn,
   });
 });
+
+app.use((error, req, res, next) => {
+  console.error(error); // Log the error details
+  const status = error.statusCode || 500;
+  const message = error.message;
+  const details = error.details || {};
+  res.status(status).json({ message: message, details: details });
+});
+
 
 mongoose
   .connect(MONGODB_URI, {
